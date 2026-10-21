@@ -5,3 +5,4 @@ neo4j
 matplotlib
 pyyaml
 jupyter
+python-dotenv

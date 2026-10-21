@@ -57,3 +57,28 @@ def chronological_split(windows):
     test=x[x.target_date.dt.year==2025].copy()
     cut=int(len(trainval)*.8)
     return trainval.iloc[:cut].copy(),trainval.iloc[cut:].copy(),test
+
+
+def build_all_history_windows(episodes, target_windows):
+    """Build the exact full pre-target histories used by the TGN-All experiment."""
+    target_keys = set(zip(target_windows["patient_id"], target_windows["target_date"]))
+    rows = []
+    for patient_id, group in episodes.sort_values(["patient_id", "episode_date"]).groupby("patient_id"):
+        group = group.sort_values("episode_date").reset_index(drop=True)
+        if len(group) < 4:
+            continue
+        for target_idx in range(3, len(group)):
+            target = group.iloc[target_idx]
+            if (patient_id, target["episode_date"]) not in target_keys:
+                continue
+            history = group.iloc[:target_idx]
+            rows.append({
+                "patient_id": patient_id,
+                "target_date": target["episode_date"],
+                "target": target["protocols"],
+                "history_protocols": history["protocols"].tolist(),
+                "history_dates": history["episode_date"].tolist(),
+                "history_length": len(history),
+                "target_episode_id": target["episode_id"],
+            })
+    return pd.DataFrame(rows).sort_values("target_date").reset_index(drop=True)
